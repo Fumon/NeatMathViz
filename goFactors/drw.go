@@ -15,18 +15,44 @@ const (
 var rnd *rand.Rand
 
 var div int = 2
+var wholes = 1
 
 var nonDivOff bool = false
 
 var pic *image.Gray16
+var picStride int
 
-func randomizeWindow(window draw.Window) {
+var window draw.Window
+
+func randomizeWindow() {
 	s := window.Screen()
 
-	colorScaler := 0xFFFF/div
+	colorScaler := 0xFFFF/div/2
+
+	//Overlay
+	totalSide := div * wholes
+	st :=  600 / totalSide
+	boundary := st * div * wholes
 
 	for i := range pic.Pix {
-		if x := ((i%pic.Stride * (i / pic.Stride)) % div); x == 0 {
+		var setting uint16
+		x, y := i % picStride, i / picStride
+		if x > boundary || y > boundary {
+			pic.Pix[i].Y = 0
+		} else {
+			x, y = x / st, y / st
+			if z := x * y % div; z == 0 {
+				setting = 0xFFFF
+			} else {
+				if nonDivOff {
+					setting = 0x0000
+				} else {
+					setting = uint16(z * colorScaler)
+				}
+			}
+		}
+		pic.Pix[i].Y = setting
+		/*if x := ((i%pic.Stride * (i / pic.Stride)) % div); x == 0 {
 			pic.Pix[i].Y = 0xFFFF
 		} else {
 			if nonDivOff {
@@ -34,7 +60,7 @@ func randomizeWindow(window draw.Window) {
 			} else{
 				pic.Pix[i].Y = uint16(x * colorScaler)
 			}
-		}
+		}*/
 		//pic.Set(i % pic.Stride, i / pic.Stride, image.Gray16Color{0xFFFF})
 	}
 	draw.Draw(s, s.Bounds(), pic, image.ZP)
@@ -61,18 +87,20 @@ func randomizeWindow(window draw.Window) {
 }
 
 func main() {
-	defer func() {
+	/*defer func() {
 		if x := recover(); x!= nil {
 			fmt.Printf("Run time panic: %v", x)
 		}
 	}()
-
+	*/
 	rnd = rand.New(rand.NewSource(src))
-	window, err := x11.NewWindowDisplay(":1")
+	win, err := x11.NewWindowDisplay(":1")
 
+	window = win
 	b := (window.Screen()).Bounds()
 
 	pic = image.NewGray16(b.Dx(), b.Dy())
+	picStride = pic.Stride
 
 	if err != nil {
 		fmt.Println(err)
@@ -98,7 +126,19 @@ func main() {
 				case 'q':
 					break Mainloop
 				case 'r':
-					randomizeWindow(window)
+					randomizeWindow()
+				case 'f':
+					if(div < 1024) {
+						div++
+					}
+					fmt.Printf("Increased Div to %v\n", div)
+					randomizeWindow()
+				case 'b':
+					if(div > 1) {
+						div--
+					}
+					fmt.Printf("Decreased div to %v\n", div)
+					randomizeWindow()
 				case 'i':
 					//Up arrow
 					if(div < 1024){
@@ -113,7 +153,17 @@ func main() {
 					fmt.Printf("Decreased div to %v\n", div)
 				case 'o':
 					nonDivOff = !nonDivOff
-					randomizeWindow(window)
+					randomizeWindow()
+				case 'w':
+					if wholes < 30 {
+						wholes++
+					}
+					fmt.Printf("Wholes++: %v", wholes)
+				case 'W':
+					if wholes > 1{
+						wholes--
+					}
+					fmt.Printf("Wholes--: %v", wholes)
 				}
 			}
 		}
