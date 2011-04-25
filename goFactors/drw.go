@@ -18,10 +18,28 @@ var div int = 2
 
 var nonDivOff bool = false
 
+var pic *image.Gray16
+
 func randomizeWindow(window draw.Window) {
 	s := window.Screen()
-	bounds := s.Bounds()
-	for i := 0; i < bounds.Dy(); i++ {
+
+	colorScaler := 0xFFFF/div
+
+	for i := range pic.Pix {
+		if x := ((i%pic.Stride * (i / pic.Stride)) % div); x == 0 {
+			pic.Pix[i].Y = 0xFFFF
+		} else {
+			if nonDivOff {
+				pic.Pix[i].Y = 0
+			} else{
+				pic.Pix[i].Y = uint16(x * colorScaler)
+			}
+		}
+		//pic.Set(i % pic.Stride, i / pic.Stride, image.Gray16Color{0xFFFF})
+	}
+	draw.Draw(s, s.Bounds(), pic, image.ZP)
+
+/*	for i := 0; i < bounds.Dy(); i++ {
 		for j := 0; j < bounds.Dx(); j++ {
 			var c image.Gray16Color
 			if x:= (j * i)%div; x == 0 {
@@ -38,7 +56,7 @@ func randomizeWindow(window draw.Window) {
 				bounds.Min.Y + i,
 				c)
 		}
-	}
+	} */
 	window.FlushImage()
 }
 
@@ -51,6 +69,11 @@ func main() {
 
 	rnd = rand.New(rand.NewSource(src))
 	window, err := x11.NewWindowDisplay(":1")
+
+	b := (window.Screen()).Bounds()
+
+	pic = image.NewGray16(b.Dx(), b.Dy())
+
 	if err != nil {
 		fmt.Println(err)
 		return;
@@ -67,15 +90,15 @@ func main() {
 			switch me.Buttons {
 			case 1:
 				fmt.Printf("Pos: (%v)\n", me.Loc)
-			case 2:
-				randomizeWindow(window)
-		}
+			}
 		} else {
 			ke, ok := e.(draw.KeyEvent)
 			if ok {
 				switch ke.Key {
 				case 'q':
 					break Mainloop
+				case 'r':
+					randomizeWindow(window)
 				case 'i':
 					//Up arrow
 					if(div < 1024){
