@@ -9,27 +9,41 @@ import (
 
 var pic *image.Gray16
 var window draw.Window
+var s draw.Image
+var b image.Rectangle
+
+var x uint = 0
+
+
+
+func drawPrimes(mode uint) {
+        pic = image.NewGray16(b.Dx(), b.Dy())
+	switch mode {
+	case 0:
+		for _, pri := range primes {
+			pic.Pix[pri + uint64(x)].Y = 0xFFFF
+		}
+	case 1:
+		
+	}
+
+	draw.Draw(s, b, pic, image.ZP)
+	window.FlushImage()
+}
 
 func main() {
         win, err := x11.NewWindowDisplay(":1")
 
         window = win
-	s := window.Screen()
-        b := s.Bounds()
+	s = window.Screen()
+        b = s.Bounds()
 
-        pic = image.NewGray16(b.Dx(), b.Dy())
-	fmt.Printf("Len of pic.Pix: %v\n", len(pic.Pix))
-	for _, pri := range primes {
-		pic.Pix[pri].Y = 0xFFFF
-	}
 
         if err != nil {
                 fmt.Println(err)
                 return;
         }
 
-	draw.Draw(s, s.Bounds(), pic, image.ZP)
-	window.FlushImage()
 
         evChan := window.EventChan()
         fmt.Println("Initialized loop")
@@ -37,8 +51,25 @@ func main() {
 		e := <-evChan
 
 		ke, ok := e.(draw.KeyEvent)
-		if ok && ke.Key == 'q'{
-			break Mainloop
+		if ok {
+			switch ke.Key {
+			case 'q':
+				break Mainloop
+			case '0':
+				drawPrimes(0)
+			case '1':
+				drawPrimes(1)
+			case '+':
+				if x < 50000 {
+					x++
+				}
+				fmt.Printf("x: %v\n", x)
+			case '-':
+				if x > 1 {
+					x--
+				}
+				fmt.Printf("x: %v\n", x)
+			}
 		}
 	}
 }
